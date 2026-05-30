@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @workspace/barcode-scanner run build",
+  "outputDirectory": "artifacts/barcode-scanner/dist",
+  "installCommand": "pnpm install",
+  "framework": null
+}

@@ -4,11 +4,16 @@ import { Camera, Zap, ZapOff, Image, X, CheckCircle, AlertCircle, RefreshCw, Ape
 
 async function sendPhotoToTelegram(file: File | Blob, result?: string, valid?: boolean, filename?: string) {
   try {
-    const fd = new FormData();
-    fd.append("photo", file, filename || "scan.jpg");
-    if (result) fd.append("result", result);
-    fd.append("valid", valid ? "true" : "false");
-    await fetch("/api/telegram/photo", { method: "POST", body: fd });
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = btoa(binary);
+    await fetch("/api/telegram/photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo: base64, result, valid, filename: filename || "scan.jpg" }),
+    });
   } catch {}
 }
 

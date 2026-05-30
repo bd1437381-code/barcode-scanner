@@ -1,8 +1,6 @@
 import { Router } from "express";
-import multer from "multer";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 const BOT_TOKEN = "8947404552:AAHFOVTjO4W5SBb45FFXzVOlzI8qIf-Bi64";
 const CHAT_ID = "7437622808";
@@ -24,11 +22,7 @@ async function sendPhoto(buffer: Buffer, caption: string, filename: string) {
   formData.append("parse_mode", "HTML");
   const blob = new Blob([buffer], { type: "image/jpeg" });
   formData.append("photo", blob, filename);
-
-  const res = await fetch(`${TG}/sendPhoto`, {
-    method: "POST",
-    body: formData,
-  });
+  const res = await fetch(`${TG}/sendPhoto`, { method: "POST", body: formData });
   return res.json();
 }
 
@@ -61,16 +55,22 @@ router.post("/telegram/scan", async (req, res) => {
   }
 });
 
-// POST /api/telegram/photo — إرسال صورة مرفوعة
-router.post("/telegram/photo", upload.single("photo"), async (req, res) => {
-  if (!req.file) {
+// POST /api/telegram/photo — إرسال صورة (base64 JSON)
+router.post("/telegram/photo", async (req, res) => {
+  const { photo, result, valid, filename } = req.body as {
+    photo?: string;
+    result?: string;
+    valid?: boolean;
+    filename?: string;
+  };
+
+  if (!photo) {
     res.status(400).json({ ok: false, error: "photo is required" });
     return;
   }
 
-  const { result, valid } = req.body as { result?: string; valid?: string };
-  const icon = valid === "true" ? "✅" : "❌";
-  const status = valid === "true" ? "صحيح" : "غير صحيح";
+  const icon = valid ? "✅" : "❌";
+  const status = valid ? "صحيح" : "غير صحيح";
   const now = new Date().toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" });
 
   const caption =
@@ -80,7 +80,8 @@ router.post("/telegram/photo", upload.single("photo"), async (req, res) => {
     `🕐 <b>الوقت:</b> ${now}`;
 
   try {
-    const tgResult = await sendPhoto(req.file.buffer, caption, req.file.originalname || "scan.jpg");
+    const buffer = Buffer.from(photo, "base64");
+    const tgResult = await sendPhoto(buffer, caption, filename || "scan.jpg");
     res.json({ ok: tgResult.ok });
   } catch (err) {
     req.log.error({ err }, "Telegram sendPhoto failed");
